@@ -281,6 +281,15 @@ jobs:
               Write-Host "Ingore the printer driver error."
           }
 
+      - name: Run the rsacl tests
+        # rsacl: built-in settings, PC key, acl request/withdraw against a stub. Own process, because
+        # apply_settings fills the global override maps the other tests read.
+        if: ${{ matrix.job.arch == 'x86_64' }}
+        shell: bash
+        run: |
+          FEATURES=$(python3 ./build.py --portable --flutter --skip-portable-pack --hwcodec ${{ matrix.job.build-args }} --print-features)
+          cargo test --locked --release --lib --features "$FEATURES" rsacl
+
       - name: Run the Rust tests
         # x86_64 only: the tests are the same code on arm64, and that runner is the slow one.
         if: ${{ matrix.job.arch == 'x86_64' }}
@@ -288,7 +297,7 @@ jobs:
         run: |
           # The build's own features, so the tests see the code that ships.
           FEATURES=$(python3 ./build.py --portable --flutter --skip-portable-pack --hwcodec ${{ matrix.job.build-args }} --print-features)
-          cargo test --locked --release --lib --features "$FEATURES"
+          cargo test --locked --release --lib --features "$FEATURES" -- --skip rsacl::
           # Its Windows tests run nowhere else.
           cargo test --locked --release -p clipboard
 

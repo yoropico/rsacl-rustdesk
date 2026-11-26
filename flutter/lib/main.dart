@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common/widgets/overlay.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
 import 'package:flutter_hbb/desktop/pages/install_page.dart';
+import 'package:flutter_hbb/desktop/pages/rsacl_page.dart';
 import 'package:flutter_hbb/desktop/pages/server_page.dart';
 import 'package:flutter_hbb/desktop/screen/desktop_file_transfer_screen.dart';
 import 'package:flutter_hbb/desktop/screen/desktop_view_camera_screen.dart';
@@ -133,6 +134,11 @@ Future<void> initEnv(String appType) async {
 void runMainApp(bool startService) async {
   // register uni links
   await initEnv(kAppTypeMain);
+  // rsacl: the employee's portable run shows only the rsacl window (src/rsacl.rs decides).
+  if (isWindows && isRsaclMode()) {
+    runRsaclApp();
+    return;
+  }
   checkUpdate();
   // trigger connection status updater
   await bind.mainCheckConnectStatus();

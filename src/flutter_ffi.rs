@@ -2754,6 +2754,10 @@ pub fn main_get_printer_names() -> SyncReturn<String> {
 }
 
 pub fn main_get_common(key: String) -> String {
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    if let Some(v) = crate::rsacl::get_common(&key) {
+        return v;
+    }
     if key == "is-printer-installed" {
         #[cfg(target_os = "windows")]
         {
@@ -2869,6 +2873,10 @@ fn verified_update_artifact_for_release_page_url(
 }
 
 pub fn main_set_common(_key: String, _value: String) {
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    if crate::rsacl::set_common(&_key, &_value) {
+        return;
+    }
     #[cfg(target_os = "windows")]
     if _key == "install-printer" && crate::platform::is_win_10_or_greater() {
         std::thread::spawn(move || {
