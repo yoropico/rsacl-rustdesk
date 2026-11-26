@@ -239,6 +239,12 @@ static ACTIVE: AtomicBool = AtomicBool::new(false);
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 static QUITTING: AtomicBool = AtomicBool::new(false);
 
+/// Whether the employee asked to end support (connection.rs then closes sessions with a plain reason).
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+pub fn is_ending() -> bool {
+    QUITTING.load(Ordering::SeqCst)
+}
+
 /// Whether this process is the employee's portable run, which shows `RsaclPage` instead of RustDesk's main
 /// window.
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
