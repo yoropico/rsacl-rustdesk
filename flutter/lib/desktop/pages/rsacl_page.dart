@@ -2,10 +2,11 @@
 // `Connected`), drawn exactly: 400x480, rs-ui light tokens, Pretendard, the company logo.
 //
 // The Rust side (src/rsacl.rs) reports the RustDesk ID to acl and keeps the state; this page polls it with
-// `main_get_common_sync("rsacl-state")` and quits through `main_set_common("rsacl-quit")`.
+// `main_get_common_sync("rsacl-state")` and ends through `main_get_common("rsacl-quit")`.
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show exit;
 
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
@@ -116,12 +117,23 @@ class _RsaclPageState extends State<RsaclPage> with WindowListener {
     } catch (_) {}
   }
 
-  /// 닫기, 지원 끝내기 and the window's own close: withdraw the request and quit (the Rust side exits).
+  /// 닫기, 지원 끝내기 and the window's own close: the Rust side withdraws the request, ends the sessions and
+  /// the connection manager, and answers; then this window closes and the process ends on its own thread.
+  /// The window stays up until the request is withdrawn (at most a few seconds), so a stalled end is visible;
+  /// the Rust side also terminates the process 10 s after the request.
   Future<void> _quit() async {
     if (_quitting) return;
     _quitting = true;
-    await windowManager.hide();
-    await bind.mainSetCommon(key: 'rsacl-quit', value: '');
+    try {
+      await bind
+          .mainGetCommon(key: 'rsacl-quit')
+          .timeout(const Duration(seconds: 6));
+    } catch (_) {}
+    try {
+      await windowManager.setPreventClose(false);
+      await windowManager.destroy();
+    } catch (_) {}
+    exit(0);
   }
 
   @override

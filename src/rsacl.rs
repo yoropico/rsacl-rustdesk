@@ -363,42 +363,84 @@ fn worker() {
     }
 }
 
-/// 닫기 and 지원 끝내기: withdraw the request, end every session, close the connection manager, quit.
+/// 닫기 and 지원 끝내기, step one: withdraw the request, end every session and close the connection manager.
+/// Runs on the caller's thread and returns, so the page can then close its window and the process ends the
+/// normal way (the first build called `exit` from a background thread, and on RS-OP-KPMG the process stayed
+/// with the request open). A watchdog terminates the process 10 s after the request whatever happens.
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
-pub fn quit() {
+pub fn end_support() {
+    use std::time::Duration;
     if QUITTING.swap(true, Ordering::SeqCst) {
+        log::info!("rsacl: end requested again");
         return;
     }
+    log::info!("rsacl: end requested");
     std::thread::spawn(|| {
-        withdraw();
-        for c in crate::server::AUTHED_CONNS.lock().unwrap().iter() {
-            c.sender.send(crate::ipc::Data::Close).ok();
-        }
-        std::thread::sleep(std::time::Duration::from_millis(500));
-        for c in crate::server::CHILD_PROCESS.lock().unwrap().iter_mut() {
-            c.kill().ok();
-        }
-        std::process::exit(0);
+        std::thread::sleep(Duration::from_secs(10));
+        log::warn!("rsacl: still running 10 s after the end request, terminating");
+        terminate();
     });
+    withdraw_within(Duration::from_secs(3));
+    log::info!("rsacl: withdraw done");
+    let conns: Vec<_> = crate::server::AUTHED_CONNS
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|c| c.sender.clone())
+        .collect();
+    let n = conns.len();
+    for tx in conns {
+        tx.send(crate::ipc::Data::Close).ok();
+    }
+    std::thread::sleep(Duration::from_millis(300));
+    let mut children = std::mem::take(&mut *crate::server::CHILD_PROCESS.lock().unwrap());
+    for c in children.iter_mut() {
+        c.kill().ok();
+    }
+    log::info!(
+        "rsacl: {n} session(s) closed, {} child process(es) ended",
+        children.len()
+    );
 }
 
-/// `main_get_common` keys: `rsacl-mode` ("Y" in the employee's run) and `rsacl-state` (JSON for RsaclPage).
+/// End this process at once, without running exit handlers.
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+fn terminate() -> ! {
+    #[cfg(windows)]
+    unsafe {
+        use windows::Win32::System::Threading::{GetCurrentProcess, TerminateProcess};
+        let _ = TerminateProcess(GetCurrentProcess(), 0);
+    }
+    std::process::exit(0)
+}
+
+/// `main_get_common` keys: `rsacl-mode` ("Y" in the employee's run), `rsacl-state` (JSON for RsaclPage) and
+/// `rsacl-quit` (runs `end_support`, answers "ok" when done; the page then closes its window).
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn get_common(key: &str) -> Option<String> {
     match key {
         "rsacl-mode" => Some(if is_active() { "Y" } else { "N" }.to_owned()),
         "rsacl-state" => Some(STATE.lock().unwrap().to_json()),
+        "rsacl-quit" => {
+            if is_active() {
+                end_support();
+            }
+            Some("ok".to_owned())
+        }
         _ => None,
     }
 }
 
-/// `main_set_common` key `rsacl-quit`. Returns true when the key was ours.
+/// `main_set_common` key `rsacl-quit`: the same end without an answer, then the process is terminated.
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn set_common(key: &str, _value: &str) -> bool {
     match key {
         "rsacl-quit" => {
             if is_active() {
-                quit();
+                std::thread::spawn(|| {
+                    end_support();
+                    terminate();
+                });
             }
             true
         }
