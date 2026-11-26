@@ -27,12 +27,17 @@ use std::path::PathBuf;
 pub const SERVER: &str = "rd.rsautomation.co.kr";
 /// The server's public key (a public value; the server enforces it with `-k _`).
 pub const KEY: &str = "SdU39Df9+bDXWTK2uzsifq9hU6MEqJqnaAPQP7Mmo4s=";
+/// rs-acl's RustDesk API: the controlled side posts its connection audits to `<API>/api/audit/conn` and its
+/// heartbeat to `<API>/api/heartbeat`. Without it RustDesk derives `http://rd.rsautomation.co.kr:21114`,
+/// where nothing answers.
+pub const API: &str = "https://acl.rsautomation.co.kr/rd";
 
 /// Override settings: the user cannot change these (rs-acl plan, Global Constraints).
 pub const OVERRIDE_SETTINGS: &[(&str, &str)] = &[
     ("custom-rendezvous-server", SERVER),
     ("relay-server", SERVER),
     ("key", KEY),
+    ("api-server", API),
     // No password: only the accept click lets a helper in.
     ("approve-mode", "click"),
     ("verification-method", "use-permanent-password"),
@@ -615,6 +620,22 @@ mod tests {
         apply_settings();
         assert_eq!(Config::get_rendezvous_server(), "rd.rsautomation.co.kr:21116");
         assert!(no_inbound());
+    }
+
+    #[test]
+    fn audits_go_to_rs_acl() {
+        apply_settings();
+        let api = || Config::get_option("api-server");
+        let custom = || Config::get_option("custom-rendezvous-server");
+        assert_eq!(crate::common::get_api_server(api(), custom()), "https://acl.rsautomation.co.kr/rd");
+        assert!(!crate::common::is_public(&api()));
+        assert_eq!(
+            crate::common::get_audit_server(api(), custom(), "conn".to_owned()),
+            "https://acl.rsautomation.co.kr/rd/api/audit/conn"
+        );
+        // The user cannot point the audits elsewhere.
+        Config::set_option("api-server".to_owned(), "https://example.com".to_owned());
+        assert_eq!(api(), API);
     }
 
     #[test]

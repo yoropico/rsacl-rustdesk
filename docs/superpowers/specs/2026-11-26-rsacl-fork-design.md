@@ -18,6 +18,12 @@ choices the brief left to the fork.
 - Applied in every process of the exe (main window, connection manager, installed service), as override,
   built-in and hard settings: the server, key and every option of the plan's Global Constraints, plus
   `direct-server = N`, `disable-tcp-listen = Y` and `hide-elevate-button-in-accept-window = Y`.
+- `api-server = https://acl.rsautomation.co.kr/rd` (override): the controlled side posts its connection audits
+  (`<api>/api/audit/conn`: `action: "new"` with the helper's IP, then a record without `action` carrying
+  `peer: [helper RustDesk ID, helper name]` and `type` once the helper is accepted, then `action: "close"`, all
+  joined by `conn_id`) and its heartbeat to rs-acl. The audit poster counts only a 2xx with an EMPTY body as
+  stored; any other 2xx body or a 5xx is retried after 10 s and 30 s with the same `nonce`, a 4xx is dropped at
+  once. Without this option RustDesk derives `http://rd.rsautomation.co.kr:21114`, where nothing answers.
 
 ## No listening socket (no Windows Firewall prompt)
 
