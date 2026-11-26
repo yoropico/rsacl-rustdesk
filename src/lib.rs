@@ -78,3 +78,7 @@ pub mod privacy_mode;
 pub mod virtual_display_manager;
 
 mod kcp_stream;
+
+// rsacl: the in-house remote-assistance build (settings, acl request, employee window).
+#[cfg(not(target_os = "ios"))]
+mod rsacl;

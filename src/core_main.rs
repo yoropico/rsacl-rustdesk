@@ -199,6 +199,11 @@ pub fn core_main() -> Option<CoreMainAction> {
         return try_send_by_dbus(args[0].clone()).map(CoreMainAction::StartUi);
     }
 
+    // rsacl: the employee's portable run shows only the rsacl window; a second run focuses the first.
+    #[cfg(windows)]
+    if args.is_empty() && !crate::rsacl::enter() {
+        return None;
+    }
     #[cfg(windows)]
     if !crate::platform::is_installed()
         && args.is_empty()

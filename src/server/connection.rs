@@ -273,6 +273,13 @@ pub struct SessionKey {
     session_id: u64,
 }
 
+impl SessionKey {
+    /// rsacl: the controlling side's name, shown in the employee window as in the accept window.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
 #[derive(Clone, Debug)]
 struct Session {
     last_recv_time: Arc<Mutex<Instant>>,

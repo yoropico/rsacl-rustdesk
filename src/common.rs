@@ -2516,6 +2516,9 @@ pub fn rustdesk_interval(i: Interval) -> ThrottledInterval {
 }
 
 pub fn load_custom_client() {
+    // rsacl: built-in server, key and employee-side settings, in every process of the exe.
+    #[cfg(not(target_os = "ios"))]
+    crate::rsacl::apply_settings();
     #[cfg(debug_assertions)]
     if let Ok(data) = std::fs::read_to_string("./custom.txt") {
         read_custom_client(data.trim());

@@ -157,8 +157,20 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/
+    # rsacl: the employee window's logo and font (Pretendard, SIL OFL 1.1, assets/rsacl/Pretendard-OFL.txt).
+    - assets/rsacl/
 
   fonts:
+    - family: RsaclPretendard
+      fonts:
+        - asset: assets/rsacl/Pretendard-Regular.otf
+          weight: 400
+        - asset: assets/rsacl/Pretendard-Medium.otf
+          weight: 500
+        - asset: assets/rsacl/Pretendard-SemiBold.otf
+          weight: 600
+        - asset: assets/rsacl/Pretendard-Bold.otf
+          weight: 700
     - family: GestureIcons
       fonts:
         - asset: assets/gestures.ttf
