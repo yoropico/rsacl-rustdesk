@@ -40,7 +40,9 @@ choices the brief left to the fork.
 - 닫기, 지원 끝내기 and the window's close: the page calls `main_get_common("rsacl-quit")`, which withdraws
   (3 s timeout), closes every session and ends the connection manager on the caller's thread and answers; the
   page then destroys its window and exits from the platform thread. A watchdog terminates the process 10 s after
-  the request. (The first build hid the window and called `exit` from a background thread; on RS-OP-KPMG the
+  the request. The sessions close through `AUTHED_CONNS`' channel, whose `Data::Close` upstream means "privacy
+  mode by another"; while `rsacl::is_ending()` that arm sends the plain "Closed manually by the peer" instead
+  (`server/connection.rs`), so the helper sees an ordinary end. (The first build hid the window and called `exit` from a background thread; on RS-OP-KPMG the
   process stayed with the session and the request open.)
   Logoff: a hidden top-level window withdraws on `WM_ENDSESSION` (3 s timeout); the request also expires after 2 h.
 - Errors show no number and the retired `ra/rsacl-ra.ps1` wording; a failed request is not retried (the text tells the

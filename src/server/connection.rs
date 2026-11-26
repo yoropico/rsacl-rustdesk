@@ -1177,6 +1177,14 @@ impl Connection {
                 Some(data) = rx_from_authed.recv() => {
                     match data {
                         ipc::Data::Close => {
+                            // rsacl: the employee pressed 지원 끝내기 -- a plain close, as the CM's disconnect
+                            // sends, not the privacy-mode notice below.
+                            #[cfg(not(any(target_os = "android", target_os = "ios")))]
+                            if crate::rsacl::is_ending() {
+                                conn.send_close_reason_no_retry("").await;
+                                conn.on_close("rsacl: support ended", true).await;
+                                break;
+                            }
                             conn.send(crate::common::make_privacy_mode_msg(
                                 back_notification::PrivacyModeState::PrvOnByOther,
                                 String::new(),
